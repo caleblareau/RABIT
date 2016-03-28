@@ -1,17 +1,19 @@
 Package: RABIT
 Type: Package
-Title: What the package does (short line)
+Title: Regression Analysis with Background InTegration
 Version: 0.1
 Date: 2016-03-28
 Authors@R: c(
-    person("Caleb", "Lareau", email = "caleblareau@g.harvard.edu", role = c("aut", "cre"))
+    person("Caleb", "Lareau", email = "caleblareau@g.harvard.edu", role = c("aut", "cre")),
+    person("Peng", "Jiang", email = "peng.jiang.software@gmail.com", role = c("aut"))
     )
 Maintainer: Caleb Lareau <caleblareau@g.harvard.edu>
-Author: Caleb Lareau [aut, cre]
-Description: RABIT REgression implemented in R
+Author: Caleb Lareau [aut, cre], Peng Jiang [aut]
+Description: A powerful feature selection algorithm with considerable background in the data.
 License: MIT + file LICENSE
 LazyData: TRUE
 Imports:
-    Rcpp (>= 0.12.3)
+    Rcpp (>= 0.12.3),
+    methods
 LinkingTo: Rcpp
 RoxygenNote: 5.0.1
