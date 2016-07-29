@@ -4,7 +4,7 @@
 \alias{runRABIT}
 \title{runRABIT}
 \usage{
-runRABIT(x, y, b = matrix(2), c = matrix(2), f = 0.05, t = TRUE,
+runRABIT(x, y, b = matrix(0), c = matrix(0), f = 0.05, t = TRUE,
   s = FALSE, r = TRUE)
 }
 \arguments{

@@ -39,6 +39,8 @@ using namespace Rcpp;
 //'
 //' @return
 //' Who knows but hopefully it's okay.
+//' @import RcppGSL
+//' @import RcppArmadillo
 //'
 //' @export
 // [[Rcpp::export]]

@@ -39,6 +39,8 @@
 #'
 #' @return
 #' Who knows but hopefully it's okay.
+#' @import RcppGSL
+#' @import RcppArmadillo
 #'
 #' @export
 runRABIT <- function(x, y, b = matrix(0), c = matrix(0), f = 0.05, t = TRUE, s = FALSE, r = TRUE) {
