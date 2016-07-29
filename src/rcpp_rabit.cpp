@@ -1,9 +1,7 @@
-#include <Rcpp.h>
-using namespace Rcpp;
-// [[Rcpp::depends(RcppGSL)]]
 // [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::depends(RcppGSL)]]
 
-
+#include <RcppArmadillo.h>
 //------------------------------------------------------------------------------
 // start util.h && util.cpp
 //------------------------------------------------------------------------------
@@ -183,6 +181,72 @@ void check_vector_dimension(const gsl_vector *X, const size_t n,
 
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
+//------------------------------------------------------------------------------
+// start lin.h & lin.c
+//------------------------------------------------------------------------------
+
+void QR_condense(double X[], double Y[], const int n, const int p, double *Y_last);
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+
+
+void QR_condense(double X[], double Y[], int n, int p, double *Y_last)
+{
+	int i, lwork = -1, info = 0;
+	double *dst, *src, *work = NULL, work_query;
+
+	if(p >= n)
+	{
+		fprintf(stderr, "Please don't use QR decomposition for p>=n\n");
+		exit(1);
+	}
+
+	// append Y at the last column of X
+	memcpy(X + n*p, Y, n*sizeof(double));
+
+	// QR decomposition
+	i = p+1;
+
+	// determine best work size first
+	arma::dgeqrf_(&n, &i, X, &n, Y, &work_query, &lwork, &info);
+
+	if(info != 0)
+	{
+		fprintf(stderr, "Error: lapack DGEQRF memory error.\n");
+		exit(1);
+	}
+
+	// allocated work space
+	lwork = (int)work_query;
+	work = (double*)malloc(lwork*sizeof(double));
+
+	// start working
+	arma::dgeqrf_(&n, &i, X, &n, Y, work, &lwork, &info);
+	free(work);
+
+	// compact space
+	for(i=0, dst=X, src=X; i<p; i++, dst+=p, src+= n)
+	{
+		if(dst != src) memcpy(dst, src, (i+1)*sizeof(double));
+
+		memset(dst+i+1, 0, (p-i-1)*sizeof(double));
+	}
+
+	memcpy(Y, src, p*sizeof(double));
+
+	*Y_last = src[p];
+}
+
+
+//------------------------------------------------------------------------------
+// end lin.h & lin.c
+//------------------------------------------------------------------------------
+
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
 
 //' @title
 //' runRABIT
@@ -227,17 +291,17 @@ void check_vector_dimension(const gsl_vector *X, const size_t n,
 //'
 //' @export
 // [[Rcpp::export]]
-List runRABIT(
-        NumericMatrix x,
-        NumericMatrix y,
-        NumericMatrix b = NumericMatrix(0),
-        NumericMatrix c = NumericMatrix(0),
+Rcpp::List runRABIT(
+        Rcpp::NumericMatrix x,
+        Rcpp::NumericMatrix y,
+        Rcpp::NumericMatrix b = Rcpp::NumericMatrix(0),
+        Rcpp::NumericMatrix c = Rcpp::NumericMatrix(0),
         float f = 0.05,
         bool t = true,
         bool s = false,
         bool r = true) {
-  // CharacterVector xx = CharacterVector::create("foo", "bar");
-  // NumericVector yy   = NumericVector::create(0.0, 1.0);
-  List z            = List::create(x, y);
+  // Rcpp::CharacterVector xx = Rcpp::CharacterVector::create("foo", "bar");
+  // Rcpp::NumericVector yy   = Rcpp::NumericVector::create(0.0, 1.0);
+  Rcpp::List z            = Rcpp::List::create(x, y);
   return z;
 }
