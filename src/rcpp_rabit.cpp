@@ -1,9 +1,30 @@
-// [[Rcpp::depends(RcppArmadillo)]]
+#include <Rcpp.h>
+using namespace Rcpp;
 // [[Rcpp::depends(RcppGSL)]]
+// [[Rcpp::depends(RcppArmadillo)]]
 
-#include <RcppArmadillo.h>
+#include <RcppGSL.h>
+
 //------------------------------------------------------------------------------
-// start util.h && util.cpp
+// start gsl_util
+//------------------------------------------------------------------------------
+
+/*** R
+dyn.load("lm.so")
+dyn.load("lin.so")
+dyn.load("gsl_util.so")
+*/
+
+
+//------------------------------------------------------------------------------
+// end util.cpp
+//------------------------------------------------------------------------------
+
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+//------------------------------------------------------------------------------
+// start util
 //------------------------------------------------------------------------------
 
 #include <gsl/gsl_cdf.h>
@@ -12,49 +33,24 @@
 #include <algorithm>
 #include <cmath>
 using namespace std;
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_cdf.h>
+#include <gsl/gsl_cblas.h>
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_blas_types.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_linalg.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_cblas.h>
+#include <gsl/gsl_blas_types.h>
+#include <gsl/gsl_blas.h>
+#include <math.h>
 
-#define	EPS	1e-10
-#define	DISPLAY_BOOL(x) ((x)?("1 (yes)"):("0 (no)"))
+#define EPS 1e-10
+#define SQRT_EPS(x) (fabs(x)<EPS?0:sqrt(x))
 
-
-// intersection of two sorted vectors. Assume vector is ordered.
-template <class T>
-void intersect(const vector<T> &s1, const vector<T> &s2, vector<T> &result)
-{
-	result.clear();
-
-	typename vector<T>::const_iterator
-		first1 = s1.begin(), last1 = s1.end(),
-		first2 = s2.begin(), last2 = s2.end();
-
-	while (first1 != last1 && first2 != last2)
-	{
-		if (*first1 < *first2)
-			first1++;
-		else if (*first2 < *first1)
-			first2++;
-		else {
-			result.push_back(*first1);
-			first1++;
-			first2++;
-		}
-	}
-}
-
-
-// print vector elements
-template <class T>
-void print_vector(const vector<T> &v, const string &title="")
-{
-	typename vector<T>::const_iterator iter;
-
-	cout << title;
-	for(iter=v.begin(); iter!=v.end(); iter++) cout << '\t' << *iter;
-	cout << endl;
-}
-
-
-// rank node structure for rank transform function
 template <class T>
 class rank_node
 {
@@ -67,23 +63,24 @@ public:
 };
 
 // transform values in src to quantiles in dst. If dst == src, transform in place
-template <class T>
-void quantile_transform(double dst[], T src[], const size_t N)
+
+// [[Rcpp::export]]
+void quantile_transform(NumericVector dst, NumericVector src, int N)
 {
 	size_t i;
-	vector<rank_node<T> > sortvec;
+	vector<rank_node<double> > sortvec;
 
-	for(i=0;i<N;i++) sortvec.push_back(rank_node<T>(src[i],i));
+	for(i=0;i<N;i++) sortvec.push_back(rank_node<double>(src[i],i));
 
 	sort(sortvec.begin(), sortvec.end());
 
 	for(i=0;i<N;i++) dst[sortvec[i].i] = (double)(i+1)/(N+1);
 }
 
-
 // transform values in src to quantiles in dst. If dst == src, transform in place
-template <class T>
-void normal_transform(double dst[], T src[], const size_t N)
+
+// [[Rcpp::export]]
+void normal_transform(NumericVector dst, NumericVector src, int N)
 {
 	size_t i;
 	double aver=0, sd=0, v;
@@ -103,15 +100,11 @@ void normal_transform(double dst[], T src[], const size_t N)
 	sd = (fabs(sd)<EPS?0:sqrt(sd));
 
 	quantile_transform(dst, src, N);
-
-	for(i=0;i<N;i++) dst[i] = gsl_cdf_gaussian_Pinv(dst[i], sd) + aver;
+	for(i=0;i<N;i++) dst[i] = gsl_cdf_gaussian_P(dst[i], sd) + aver;
 }
 
-size_t triangle_index(size_t i, size_t j);
-
-void Benjamini_Hochberg(double FDR[], double pvalue[], const size_t N);
-
-void Benjamini_Hochberg(double FDR[], double pvalue[], const size_t N)
+// [[Rcpp::export]]
+void Benjamini_Hochberg(NumericVector FDR, NumericVector pvalue, int N)
 {
 	size_t i;
 	double qvalue = 1;
@@ -128,121 +121,20 @@ void Benjamini_Hochberg(double FDR[], double pvalue[], const size_t N)
 	}
 }
 
-size_t triangle_index(size_t i, size_t j)
+// [[Rcpp::export]]
+int triangle_index(int i, int j)
 {
 	if(i==j){
 		cerr << "Error: cannot use i==j in triangle index." << endl;
 		exit(1);
 
-	}else if(i<j) swap<size_t>(i,j);
+	}else if(i<j) swap<int>(i,j);
 
 	return ((i*(i-1))>>1) + j;
 }
 
 //------------------------------------------------------------------------------
-// end util.h & util.cpp
-//------------------------------------------------------------------------------
-
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-//------------------------------------------------------------------------------
-// start gsl_util.h && gsl_util.c
-//------------------------------------------------------------------------------
-
-#include <gsl/gsl_blas.h>
-
-// EPS correction for sqrt function on nearly 0 value
-#define SQRT_EPS(x) (fabs(x)<EPS?0:sqrt(x))
-
-// return 1 if v variation is 0 or size is smaller than 2
-// if standardize, make norm2 = 1
-int Z_normalize(gsl_vector *v, const int standardize);
-
-
-// change the dimension of matrices and vectos
-void resize_matrix(gsl_matrix *m, const size_t size1, const size_t size2, double *data);
-void resize_vector(gsl_vector *v, const size_t size, double *data);
-
-void print_vector(const gsl_vector *v, const char *title, FILE *fp);
-void print_matrix(const gsl_matrix *X, const char *title, FILE *fp);
-
-
-// check the dimension of matrices and vectos
-void check_matrix_dimension(const gsl_matrix *X, const size_t n, const size_t p,
-		const char *title, const int equal_stride);
-
-void check_vector_dimension(const gsl_vector *X, const size_t n,
-		const char *title, const size_t stride);
-
-
-//------------------------------------------------------------------------------
-// end gsl_util.h BUT NEED TO ADD gsl_util.c
-//------------------------------------------------------------------------------
-
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-//------------------------------------------------------------------------------
-// start lin.h & lin.c
-//------------------------------------------------------------------------------
-
-void QR_condense(double X[], double Y[], const int n, const int p, double *Y_last);
-
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-
-
-void QR_condense(double X[], double Y[], int n, int p, double *Y_last)
-{
-	int i, lwork = -1, info = 0;
-	double *dst, *src, *work = NULL, work_query;
-
-	if(p >= n)
-	{
-		fprintf(stderr, "Please don't use QR decomposition for p>=n\n");
-		exit(1);
-	}
-
-	// append Y at the last column of X
-	memcpy(X + n*p, Y, n*sizeof(double));
-
-	// QR decomposition
-	i = p+1;
-
-	// determine best work size first
-	arma::dgeqrf_(&n, &i, X, &n, Y, &work_query, &lwork, &info);
-
-	if(info != 0)
-	{
-		fprintf(stderr, "Error: lapack DGEQRF memory error.\n");
-		exit(1);
-	}
-
-	// allocated work space
-	lwork = (int)work_query;
-	work = (double*)malloc(lwork*sizeof(double));
-
-	// start working
-	arma::dgeqrf_(&n, &i, X, &n, Y, work, &lwork, &info);
-	free(work);
-
-	// compact space
-	for(i=0, dst=X, src=X; i<p; i++, dst+=p, src+= n)
-	{
-		if(dst != src) memcpy(dst, src, (i+1)*sizeof(double));
-
-		memset(dst+i+1, 0, (p-i-1)*sizeof(double));
-	}
-
-	memcpy(Y, src, p*sizeof(double));
-
-	*Y_last = src[p];
-}
-
-
-//------------------------------------------------------------------------------
-// end lin.h & lin.c
+// end util.cpp
 //------------------------------------------------------------------------------
 
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -291,17 +183,20 @@ void QR_condense(double X[], double Y[], int n, int p, double *Y_last)
 //'
 //' @export
 // [[Rcpp::export]]
-Rcpp::List runRABIT(
-        Rcpp::NumericMatrix x,
-        Rcpp::NumericMatrix y,
-        Rcpp::NumericMatrix b = Rcpp::NumericMatrix(0),
-        Rcpp::NumericMatrix c = Rcpp::NumericMatrix(0),
+List runRABIT(
+        NumericMatrix x,
+        NumericMatrix y,
+        NumericMatrix b = NumericMatrix(0),
+        NumericMatrix c = NumericMatrix(0),
         float f = 0.05,
         bool t = true,
         bool s = false,
         bool r = true) {
-  // Rcpp::CharacterVector xx = Rcpp::CharacterVector::create("foo", "bar");
-  // Rcpp::NumericVector yy   = Rcpp::NumericVector::create(0.0, 1.0);
-  Rcpp::List z            = Rcpp::List::create(x, y);
+  // CharacterVector xx = CharacterVector::create("foo", "bar");
+  NumericVector yy   = NumericVector::create(0.0, 1.0, 3.2, 5.5, 4.4);
+  NumericVector y2   =  NumericVector::create(0.0, 1.0, 3.2, 5.5, 4.4);
+  NumericVector qq   = NumericVector::create(0.1, 1.1, 3.22, 1.5, 2.4);
+  Benjamini_Hochberg(yy, qq, 5);
+  List z            = List::create(x, yy, triangle_index(4,5));
   return z;
 }

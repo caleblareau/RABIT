@@ -2,20 +2,69 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include <RcppArmadillo.h>
+#include <RcppGSL.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
 
+// quantile_transform
+void quantile_transform(NumericVector dst, NumericVector src, int N);
+RcppExport SEXP RABIT_quantile_transform(SEXP dstSEXP, SEXP srcSEXP, SEXP NSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type dst(dstSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type src(srcSEXP);
+    Rcpp::traits::input_parameter< int >::type N(NSEXP);
+    quantile_transform(dst, src, N);
+    return R_NilValue;
+END_RCPP
+}
+// normal_transform
+void normal_transform(NumericVector dst, NumericVector src, int N);
+RcppExport SEXP RABIT_normal_transform(SEXP dstSEXP, SEXP srcSEXP, SEXP NSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type dst(dstSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type src(srcSEXP);
+    Rcpp::traits::input_parameter< int >::type N(NSEXP);
+    normal_transform(dst, src, N);
+    return R_NilValue;
+END_RCPP
+}
+// Benjamini_Hochberg
+void Benjamini_Hochberg(NumericVector FDR, NumericVector pvalue, int N);
+RcppExport SEXP RABIT_Benjamini_Hochberg(SEXP FDRSEXP, SEXP pvalueSEXP, SEXP NSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type FDR(FDRSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pvalue(pvalueSEXP);
+    Rcpp::traits::input_parameter< int >::type N(NSEXP);
+    Benjamini_Hochberg(FDR, pvalue, N);
+    return R_NilValue;
+END_RCPP
+}
+// triangle_index
+int triangle_index(int i, int j);
+RcppExport SEXP RABIT_triangle_index(SEXP iSEXP, SEXP jSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< int >::type i(iSEXP);
+    Rcpp::traits::input_parameter< int >::type j(jSEXP);
+    __result = Rcpp::wrap(triangle_index(i, j));
+    return __result;
+END_RCPP
+}
 // runRABIT
-Rcpp::List runRABIT(Rcpp::NumericMatrix x, Rcpp::NumericMatrix y, Rcpp::NumericMatrix b, Rcpp::NumericMatrix c, float f, bool t, bool s, bool r);
+List runRABIT(NumericMatrix x, NumericMatrix y, NumericMatrix b, NumericMatrix c, float f, bool t, bool s, bool r);
 RcppExport SEXP RABIT_runRABIT(SEXP xSEXP, SEXP ySEXP, SEXP bSEXP, SEXP cSEXP, SEXP fSEXP, SEXP tSEXP, SEXP sSEXP, SEXP rSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type x(xSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type y(ySEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type b(bSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type c(cSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type y(ySEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type b(bSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type c(cSEXP);
     Rcpp::traits::input_parameter< float >::type f(fSEXP);
     Rcpp::traits::input_parameter< bool >::type t(tSEXP);
     Rcpp::traits::input_parameter< bool >::type s(sSEXP);
