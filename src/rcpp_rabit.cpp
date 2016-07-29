@@ -453,6 +453,12 @@ size_t convert_RSS_to_metric(double metric[], const size_t size, const size_t n,
 //------------------------------------------------------------------------------
 
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+//------------------------------------------------------------------------------
+// Main function call and documentation shown below now
+//------------------------------------------------------------------------------
 
 
 //' @title
@@ -507,10 +513,65 @@ List runRABIT(
         bool t = true,
         bool s = false,
         bool r = true) {
-  // CharacterVector xx = CharacterVector::create("foo", "bar");
-  NumericVector yy   = NumericVector::create(0.0, 1.0, 3.2, 5.5, 4.4);
-  NumericVector y2   =  NumericVector::create(0.0, 1.0, 3.2, 5.5, 4.4);
-  NumericVector qq   = NumericVector::create(0.1, 1.1, 3.22, 1.5, 2.4);
-  List z            = List::create(x, yy, triangle_index(4,5));
-  return z;
+
+    int status, calculate;
+
+    gsl_matrix *X, *Y, *B, *C;
+    gsl_vector *beta, *sderr, *tt, *FDR, *RSS;
+
+    size_t i, j, inx, count, parseCnt = 4, *index_array, n, p, k, m; //sudo random assignment here.
+
+
+    // Background confounding factor matrices for Y
+    set<string> Cfile_vec;
+    set<string>::iterator Cfile_vec_iter;
+
+    double FDR_thres = f, *arr, *metric_array, sigma2, exit_point =0.1;
+
+    // transform Y vectors to normal distribution
+    bool normal_transform = t, select_best = s, run_forward = r;
+
+    vector<string>
+        rownames,	// common row names across all matrices
+        colnames		// common column names across Y and all its background matrices
+        ;
+
+    vector<rank_node<double> > FDR_sortvec;
+    vector<rank_node<double> >::iterator FDR_sortvec_iter;
+    set<string> included;
+
+    // read in matrix maps from file
+    NumericMatrix *X_map = new NumericMatrix, *Y_map = new NumericMatrix, *B_map = new NumericMatrix, *C_map;
+    size_t append_size = 1 + Cfile_vec.size();
+
+    // construct X background matrix B
+    if(b == NumericMatrix(0))
+    {
+        // no X background, construct all 1 background as Intercept
+        map<string, size_t>::iterator map_iter;
+
+        // same row dimension with X
+        B_map->Nrow = x->Nrow;
+        B_map->row_map = x->row_map;
+        B_map->rownames = x->rownames;
+
+        // repeated column
+        B_map->Ncol = append_size;
+        for(i=0;i<append_size;i++) B_map->colnames.push_back("Intercept");
+
+        for(i=0; i<B_map->Nrow; i++)
+        {
+            arr = new double[append_size];
+            for(j=0;j<append_size;j++) arr[j] = 1;
+            B_map->mat.push_back(arr);
+        }
+
+    }else{
+        B_map->b
+    }
+
 }
+
+
+
+
