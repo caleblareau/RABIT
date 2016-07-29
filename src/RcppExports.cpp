@@ -5,14 +5,21 @@
 
 using namespace Rcpp;
 
-// rcpp_hellow
-List rcpp_hellow(int q);
-RcppExport SEXP RABIT_rcpp_hellow(SEXP qSEXP) {
+// runRABIT
+List runRABIT(NumericMatrix x, NumericMatrix y, NumericMatrix b, NumericMatrix c, float f, bool t, bool s, bool r);
+RcppExport SEXP RABIT_runRABIT(SEXP xSEXP, SEXP ySEXP, SEXP bSEXP, SEXP cSEXP, SEXP fSEXP, SEXP tSEXP, SEXP sSEXP, SEXP rSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< int >::type q(qSEXP);
-    __result = Rcpp::wrap(rcpp_hellow(q));
+    Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type y(ySEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type b(bSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type c(cSEXP);
+    Rcpp::traits::input_parameter< float >::type f(fSEXP);
+    Rcpp::traits::input_parameter< bool >::type t(tSEXP);
+    Rcpp::traits::input_parameter< bool >::type s(sSEXP);
+    Rcpp::traits::input_parameter< bool >::type r(rSEXP);
+    __result = Rcpp::wrap(runRABIT(x, y, b, c, f, t, s, r));
     return __result;
 END_RCPP
 }
