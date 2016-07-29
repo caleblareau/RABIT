@@ -7,54 +7,6 @@
 
 using namespace Rcpp;
 
-// quantile_transform
-void quantile_transform(NumericVector dst, NumericVector src, int N);
-RcppExport SEXP RABIT_quantile_transform(SEXP dstSEXP, SEXP srcSEXP, SEXP NSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< NumericVector >::type dst(dstSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type src(srcSEXP);
-    Rcpp::traits::input_parameter< int >::type N(NSEXP);
-    quantile_transform(dst, src, N);
-    return R_NilValue;
-END_RCPP
-}
-// normal_transform
-void normal_transform(NumericVector dst, NumericVector src, int N);
-RcppExport SEXP RABIT_normal_transform(SEXP dstSEXP, SEXP srcSEXP, SEXP NSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< NumericVector >::type dst(dstSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type src(srcSEXP);
-    Rcpp::traits::input_parameter< int >::type N(NSEXP);
-    normal_transform(dst, src, N);
-    return R_NilValue;
-END_RCPP
-}
-// Benjamini_Hochberg
-void Benjamini_Hochberg(NumericVector FDR, NumericVector pvalue, int N);
-RcppExport SEXP RABIT_Benjamini_Hochberg(SEXP FDRSEXP, SEXP pvalueSEXP, SEXP NSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< NumericVector >::type FDR(FDRSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type pvalue(pvalueSEXP);
-    Rcpp::traits::input_parameter< int >::type N(NSEXP);
-    Benjamini_Hochberg(FDR, pvalue, N);
-    return R_NilValue;
-END_RCPP
-}
-// triangle_index
-int triangle_index(int i, int j);
-RcppExport SEXP RABIT_triangle_index(SEXP iSEXP, SEXP jSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< int >::type i(iSEXP);
-    Rcpp::traits::input_parameter< int >::type j(jSEXP);
-    __result = Rcpp::wrap(triangle_index(i, j));
-    return __result;
-END_RCPP
-}
 // runRABIT
 List runRABIT(NumericMatrix x, NumericMatrix y, NumericMatrix b, NumericMatrix c, float f, bool t, bool s, bool r);
 RcppExport SEXP RABIT_runRABIT(SEXP xSEXP, SEXP ySEXP, SEXP bSEXP, SEXP cSEXP, SEXP fSEXP, SEXP tSEXP, SEXP sSEXP, SEXP rSEXP) {

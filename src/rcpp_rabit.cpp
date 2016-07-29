@@ -6,7 +6,7 @@ using namespace Rcpp;
 #include <RcppGSL.h>
 
 //------------------------------------------------------------------------------
-// start gsl_util
+// import C code
 //------------------------------------------------------------------------------
 
 /*** R
@@ -17,11 +17,74 @@ dyn.load("gsl_util.so")
 
 
 //------------------------------------------------------------------------------
-// end util.cpp
+// end C code
 //------------------------------------------------------------------------------
 
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
+//------------------------------------------------------------------------------
+// import Matrix map
+//------------------------------------------------------------------------------
+
+
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <cstdlib>
+using namespace std;
+
+
+double string_to_number(const string &s, const string &errmsg)
+{
+	double r;
+	char *endstr;
+
+	r = strtod(s.c_str(), &endstr);
+
+	if (*endstr!='\0' || endstr == s.c_str())
+	{
+		cerr << "Error: " << errmsg << ". \"" << s << "\" is not a number." << endl;
+		exit(1);
+	}
+
+	return r;
+}
+
+#include <string>
+#include <vector>
+#include <map>
+using namespace std;
+
+double string_to_number(const string &s, const string &errmsg="");
+
+class Matrix_map {
+public:
+	Matrix_map();
+	~Matrix_map();
+
+	map<string, size_t> row_map, col_map;
+	vector<string> rownames, colnames;
+
+	size_t Nrow, Ncol;
+
+	vector<double*> mat;
+
+	// read matrix from file, append 1 to extra space
+	void read(const string &file, const size_t append_count = 0);
+
+	// print matrix
+	void print() const;
+};
+
+
+Matrix_map::Matrix_map()
+:Nrow(0), Ncol(0) {}
+
+
+Matrix_map::~Matrix_map()
+{
+	for (vector<double*>::iterator iter = mat.begin(); iter!=mat.begin(); iter++) delete[] *iter;
+}
 
 //------------------------------------------------------------------------------
 // start util
@@ -51,6 +114,45 @@ using namespace std;
 #define EPS 1e-10
 #define SQRT_EPS(x) (fabs(x)<EPS?0:sqrt(x))
 
+
+// intersection of two sorted vectors. Assume vector is ordered.
+template <class T>
+void intersect(const vector<T> &s1, const vector<T> &s2, vector<T> &result)
+{
+	result.clear();
+
+	typename vector<T>::const_iterator
+		first1 = s1.begin(), last1 = s1.end(),
+		first2 = s2.begin(), last2 = s2.end();
+
+	while (first1 != last1 && first2 != last2)
+	{
+		if (*first1 < *first2)
+			first1++;
+		else if (*first2 < *first1)
+			first2++;
+		else {
+			result.push_back(*first1);
+			first1++;
+			first2++;
+		}
+	}
+}
+
+
+// print vector elements
+template <class T>
+void print_vector(const vector<T> &v, const string &title="")
+{
+	typename vector<T>::const_iterator iter;
+
+	cout << title;
+	for(iter=v.begin(); iter!=v.end(); iter++) cout << '\t' << *iter;
+	cout << endl;
+}
+
+
+// rank node structure for rank transform function
 template <class T>
 class rank_node
 {
@@ -63,24 +165,23 @@ public:
 };
 
 // transform values in src to quantiles in dst. If dst == src, transform in place
-
-// [[Rcpp::export]]
-void quantile_transform(NumericVector dst, NumericVector src, int N)
+template <class T>
+void quantile_transform(double dst[], T src[], const size_t N)
 {
 	size_t i;
-	vector<rank_node<double> > sortvec;
+	vector<rank_node<T> > sortvec;
 
-	for(i=0;i<N;i++) sortvec.push_back(rank_node<double>(src[i],i));
+	for(i=0;i<N;i++) sortvec.push_back(rank_node<T>(src[i],i));
 
 	sort(sortvec.begin(), sortvec.end());
 
 	for(i=0;i<N;i++) dst[sortvec[i].i] = (double)(i+1)/(N+1);
 }
 
-// transform values in src to quantiles in dst. If dst == src, transform in place
 
-// [[Rcpp::export]]
-void normal_transform(NumericVector dst, NumericVector src, int N)
+// transform values in src to quantiles in dst. If dst == src, transform in place
+template <class T>
+void normal_transform(double dst[], T src[], const size_t N)
 {
 	size_t i;
 	double aver=0, sd=0, v;
@@ -100,11 +201,15 @@ void normal_transform(NumericVector dst, NumericVector src, int N)
 	sd = (fabs(sd)<EPS?0:sqrt(sd));
 
 	quantile_transform(dst, src, N);
-	for(i=0;i<N;i++) dst[i] = gsl_cdf_gaussian_P(dst[i], sd) + aver;
+
+	for(i=0;i<N;i++) dst[i] = gsl_cdf_gaussian_Pinv(dst[i], sd) + aver;
 }
 
-// [[Rcpp::export]]
-void Benjamini_Hochberg(NumericVector FDR, NumericVector pvalue, int N)
+size_t triangle_index(size_t i, size_t j);
+
+void Benjamini_Hochberg(double FDR[], double pvalue[], const size_t N);
+
+void Benjamini_Hochberg(double FDR[], double pvalue[], const size_t N)
 {
 	size_t i;
 	double qvalue = 1;
@@ -121,20 +226,230 @@ void Benjamini_Hochberg(NumericVector FDR, NumericVector pvalue, int N)
 	}
 }
 
-// [[Rcpp::export]]
-int triangle_index(int i, int j)
+size_t triangle_index(size_t i, size_t j)
 {
 	if(i==j){
 		cerr << "Error: cannot use i==j in triangle index." << endl;
 		exit(1);
 
-	}else if(i<j) swap<int>(i,j);
+	}else if(i<j) swap<size_t>(i,j);
 
 	return ((i*(i-1))>>1) + j;
 }
 
+
 //------------------------------------------------------------------------------
 // end util.cpp
+//------------------------------------------------------------------------------
+
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+//------------------------------------------------------------------------------
+// start Rabit.cpp auxillary functions
+//------------------------------------------------------------------------------
+
+extern "C" {
+#include "gsl_util.h"
+#include "lm.h"
+}
+
+#include "util.h"
+#include <sys/time.h>
+#include <cstring>
+#include <ctime>
+#include <set>
+#include <fstream>
+#include <sstream>
+using namespace std;
+
+
+// verbose output
+int verbose_flag = 0;
+
+
+void get_common_matrix_name(
+		const vector<Matrix_map*> &matrix_vec,
+		vector<string> &common_names, const bool row_flag)
+{
+	// align the row names of all matrices
+	vector<string> A, B;
+	vector<Matrix_map*>::const_iterator miter;
+
+	for(miter=matrix_vec.begin(); miter!=matrix_vec.end(); miter++)
+	{
+		if(row_flag)
+			B = (*miter)->rownames;
+		else
+			B = (*miter)->colnames;
+
+		sort(B.begin(), B.end());
+
+		if(miter == matrix_vec.begin())
+			common_names = B;
+		else
+			intersect(A, B, common_names);
+
+		A = common_names;
+	}
+}
+
+
+gsl_matrix *matrix_map_to_gsl(
+		const vector<string> &rownames,
+		const vector<string> &colnames,
+		const Matrix_map *mat,
+		const bool transpose)
+{
+	size_t i,j,
+		Nrow = rownames.size(), Ncol = colnames.size(),
+		*arrinx = new size_t[Ncol];
+
+	double *arr;
+	gsl_matrix *result;
+
+	if(transpose)
+		result = gsl_matrix_alloc(Ncol, Nrow);
+	else
+		result = gsl_matrix_alloc(Nrow, Ncol);
+
+	map<string, size_t>::const_iterator miter;
+
+	for (i=0;i<Ncol;i++)
+	{
+		miter = mat->col_map.find(colnames[i]);
+
+		if(miter==mat->col_map.end())
+		{	// I assume this never happens
+			cerr << "Fatal error: missing element \"" << colnames[i] << "\"." << endl;
+			exit(1);
+		}
+
+		arrinx[i] = miter->second;
+	}
+
+
+	for(i=0; i<Nrow; i++)
+	{
+		miter = mat->row_map.find(rownames[i]);
+
+		if(miter==mat->row_map.end())
+		{	// I assume this never happens
+			cerr << "Fatal error: missing element \"" << rownames[i] << "\"." << endl;
+			exit(1);
+		}
+
+		arr = mat->mat[miter->second];
+
+		for(j=0;j<Ncol;j++)
+		{
+			if(transpose)
+				gsl_matrix_set(result, j, i, arr[arrinx[j]]);
+			else
+				gsl_matrix_set(result, i, j, arr[arrinx[j]]);
+		}
+	}
+
+	return result;
+}
+
+
+
+void write_gsl_matrix(const gsl_matrix *m,
+		const vector<string> &rownames, const vector<string> &colnames,
+		ofstream &fout, const bool transpose)
+{
+	double v;
+	size_t i,j, Nrow = rownames.size(), Ncol = colnames.size();
+
+	for(i=0;i<Ncol;i++) fout << colnames[i] << (i==Ncol-1?'\n':'\t');
+
+	for(i=0;i<Nrow;i++)
+	{
+		fout << rownames[i];
+
+		for(j=0;j<Ncol;j++)
+		{
+			if (transpose)
+				v = gsl_matrix_get(m,j,i);
+			else
+				v = gsl_matrix_get(m,i,j);
+
+			fout << '\t' << v;
+		}
+
+		fout << '\n';
+	}
+}
+
+
+void normal_transform_gsl_matrix(gsl_matrix *m)
+{
+	size_t i, j, n = m->size1, p = m->size2;
+
+	double *arr = new double[p];
+
+	for(i=0;i<n;i++)
+	{
+		gsl_vector_view r = gsl_matrix_row(m,i);
+
+		for(j=0;j<p;j++) arr[j] = gsl_vector_get(&r.vector, j);
+
+		normal_transform(arr, arr, p);
+
+		for(j=0;j<p;j++) gsl_vector_set(&r.vector, j, arr[j]);
+	}
+
+	delete[] arr;
+}
+
+
+size_t convert_RSS_to_metric(double metric[], const size_t size, const size_t n, const size_t p, double exit_point)
+{
+	size_t i, inx_min = string::npos;
+	double sigma2, metric_min = DBL_MAX, t;
+
+	if(p+size >= n)
+	{
+		cerr << "Error: Illegal number of features selected p + size >= n" << endl;
+		exit(1);
+	}
+
+	sigma2 = metric[size-1]/(n-size-p);
+
+	bool smallsigma2 = (fabs(sigma2) < EPS);
+
+	if(verbose_flag && smallsigma2)
+		cerr << "Warning: Sigma2 is too small. Use different form for Mallow's Cp calculation." << endl;
+
+	for(i=0 ; i<size ; i++)
+	{
+		// Mallow's Cp
+		if(smallsigma2){
+			t = (metric[i] + 2*(p+i+1)*sigma2)/n;
+
+			if(i==0)
+				exit_point = exit_point*t;
+			else
+				if(t < exit_point) break;
+
+		}else
+			t = metric[i]/sigma2 + 2*(p+i+1) - n;
+
+		metric[i] = t;
+
+		if(t < metric_min)
+		{
+			metric_min = t;
+			inx_min = i;
+		}
+	}
+
+	return inx_min;
+}
+
+
+//------------------------------------------------------------------------------
+// end Rabit.cpp auxillary functions
 //------------------------------------------------------------------------------
 
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -196,7 +511,6 @@ List runRABIT(
   NumericVector yy   = NumericVector::create(0.0, 1.0, 3.2, 5.5, 4.4);
   NumericVector y2   =  NumericVector::create(0.0, 1.0, 3.2, 5.5, 4.4);
   NumericVector qq   = NumericVector::create(0.1, 1.1, 3.22, 1.5, 2.4);
-  Benjamini_Hochberg(yy, qq, 5);
   List z            = List::create(x, yy, triangle_index(4,5));
   return z;
 }
